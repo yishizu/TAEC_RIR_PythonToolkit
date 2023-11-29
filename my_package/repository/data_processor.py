@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 import csv
 import os
-
+import codecs
 
 def find_row_by_name(target_name, name_key,target_column = None ):
     current_dir = os.path.dirname(__file__)
     two_levels_up = os.path.abspath(os.path.join(current_dir, '..', '..'))
     csv_path = os.path.join(two_levels_up, 'data','familydata.csv')
     data = []
-    with open(csv_path, mode='r') as csv_file:
+    with codecs.open(csv_path, 'r', 'utf-8', 'ignore') as csv_file:
         reader = csv.DictReader(csv_file)
 
         for row in reader:
