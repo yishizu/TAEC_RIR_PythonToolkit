@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
-from rhinoinside_utils import get_active_doc, convert_rhino_to_revit_geometry
+from utils.rhinoinside_utils import get_active_doc, convert_rhino_to_revit_geometry
 from repository.data_processor import find_row_by_name
 from Autodesk.Revit.DB.Structure import StructuralType
 from Autodesk.Revit.DB import BuiltInCategory,FilteredElementCollector,FamilySymbol,BuiltInParameter,XYZ,Transaction
-
+from geometry.geometry import get_angle_from_plane, copy_geometry_at_plane
+import Rhino.Geometry as rg
 
 def get_built_in_category(category_name):
     try:
@@ -38,7 +39,7 @@ def place_family_instance(doc, family_symbol, position):
         return None
     
 
-def place_family_instance_by_name(_blockname, _point):
+def place_family_instance_by_name_and_point(_blockname, _point):
     doc = get_active_doc()
     type_name = find_row_by_name(_blockname,'BlockName')[0]['FamilyType']
     category_name = find_row_by_name(_blockname,'BlockName')[0]['BuiltInCategory']
@@ -55,3 +56,33 @@ def place_family_instance_by_name(_blockname, _point):
     position = convert_rhino_to_revit_geometry(_point)
     # FamilyInstanceを配置
     return place_family_instance(doc, family_symbol, position)
+
+def place_family_instance_by_name_and_plane(_blockname, plane):
+    plane_origin = plane.Origin
+    instance = place_family_instance_by_name_and_point(_blockname, plane_origin)
+    rotate_family_instance_by_plane(instance, plane)
+    
+    return instance
+
+
+def rotate_family_instance_by_plane(instance, plane):
+    angle = get_angle_from_plane(plane)
+    print(angle)
+    rotate_family_instance(instance, angle,plane)
+
+def rotate_family_instance(instance, angle, plane):
+    # FamilyInstanceを回転するためのトランザクションを開始
+    transaction = Transaction(instance.Document, "Rotate Family Instance")
+    transaction.Start()
+
+    try:
+        # FamilyInstanceを回転
+        start_point = plane.Origin
+        end_point = plane.Origin + plane.XAxis 
+        line = rg.Line(start_point, end_point)
+        rv_line = convert_rhino_to_revit_geometry(line)
+        instance.Location.Rotate(rv_line, angle)
+        transaction.Commit()
+    except Exception as e:
+        print(e)
+        transaction.RollBack()
